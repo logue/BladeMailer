@@ -1,13 +1,14 @@
 <?php
-/**
- * TransmitMail
- *
- * @package   TransmitMail
- * @license   MIT License
- * @copyright TAGAWA Takao, dounokouno@gmail.com
- * @link      https://github.com/dounokouno/TransmitMail
- */
+if (PHP_SAPI == 'cli-server') {
+    // To help the built-in PHP dev server, check if the request was actually for
+    // something which should probably be served as a static file
+    $url  = parse_url($_SERVER['REQUEST_URI']);
+    $file = __DIR__ . $url['path'];
+    if (is_file($file)) {
+        return false;
+    }
+}
 
-require_once 'lib/TransmitMail.php';
-$tm = new TransmitMail('config/config.yml');
-$tm->run();
+require __DIR__ . '/lib/vendor/autoload.php';
+require __DIR__ . '/lib/Controller.php';
+require __DIR__ . '/lib/Router.php';

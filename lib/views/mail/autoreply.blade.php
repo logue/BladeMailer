@@ -1,4 +1,4 @@
-{$メールアドレス.value} 様
+{{ $params['メールアドレス'] }} 様
 
 お問い合わせいただき、ありがとうございます。
 1〜2営業日以内に担当者よりご連絡さしあげます。
@@ -11,9 +11,10 @@ info@example.com
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 【お問い合わせ内容は下記の通りです】
-{loop:$params}
-{$params[].key} = {$params[].value}
-{/loop:$params}
+@foreach($params as $key=>$value)
+■{{ $key }}：
+{{ $value }}
+@endforeach
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

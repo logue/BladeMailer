@@ -1,12 +1,15 @@
-# TransmitMail
+# Blade Mailer (w
 
-[Readme in English is here](https://github.com/dounokouno/TransmitMail/blob/master/README_en.md)
+![Blade Mailer](./logo.png "Blade Mailer")
 
 Copyright 表示不要の PHP 製汎用メールフォームシステム
 
 ## 概要
 
-- PHP 5.4 以上で動作するシンプルな汎用メールフォームシステムです。
+※開発中です。動作しません。
+
+- TransmitMailのテンプレートエンジンをbladeに置き換えた汎用メールフォームシステムです。
+- PHP 5.5以上で動作します。
 - MIT ライセンスで公開していますので、改変、再配布はご自由にどうぞ。
 - Copyright 表示、リンク、ご連絡等は一切必要ありません。
 
@@ -16,29 +19,19 @@ MIT license
 
 ## デモ
 
-[http://etc.dounokouno.com/TransmitMail/demo/](http://etc.dounokouno.com/TransmitMail/demo/)
-
 ## 使い方
-
-Wiki にマニュアルをまとめました。
-
-[https://github.com/dounokouno/TransmitMail/wiki](https://github.com/dounokouno/TransmitMail/wiki)
 
 ## お問い合わせ
 
 バグ、不具合、カスタマイズ方法等は、 GitHub issue へご連絡ください。
 
-[Issues - dounokouno/TransmitMail - GitHub](https://github.com/dounokouno/TransmitMail/issues)
+[Issues - logue/BladeMailer - GitHub](https://github.com/logue/BladeMailer/issues)
 
 ## 免責事項
 
 当システムをご利用、もしくはご利用になれないことにより生じるいかなるトラブルや損害には、当方は一切の責任を負いません。
 
 ## Special Thanks
-
-下記テンプレートエンジンを改変して利用させていただきました。
-
-* [firegoby » tinyTemplate](http://firegoby.theta.ne.jp/download/tinytemplate)
 
 メール送信に Qdmail 、 Qdsmtp を利用させていただきました。
 
@@ -47,8 +40,9 @@ Wiki にマニュアルをまとめました。
 
 ## Author
 
-[@dounokouno](https://twitter.com/dounokouno)
+[@logue256](https://twitter.com/logue256)
 
 ## Copyright
 
 Copyright (c) 2011 TAGAWA Takao, dounokouno@gmail.com
+Copyright (c) 2018 Logue, logue@hotmail.co.jp

@@ -1,0 +1,8 @@
+{
+    "require": {
+        "slim/slim": "^3.11",
+        "rubellum/slim-blade-view": "^0.1.1",
+        "slim/csrf": "^0.8.3",
+        "illuminate/translation": "^5.7"
+    }
+}
