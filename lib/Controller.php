@@ -8,47 +8,79 @@ class Controller
 {
     private $app;
     // 除外するフォーム名
-    private $exclusion_item = '[
-        "x",
-        "y",
-        "page",
-        "required",             // 必須
-        "singlebyte",           // 半角文字
-        "alphanumeric",         // 半角英数字
-        "alphabetic",           // 半角英字
-        "numeric",              // 数字
-        "numeric_hyphen",       // 数字+ハイフン
-        "hiragana",             // ひらがな
-        "katakana",             // カタカナ
-        "contain_multibyte",    // 全角文字を含む
-        "multibyte",            // 全角文字のみ
-        "email",                // メールアドレス
-        "match",                // 一致
-        "len",                  // 長さ
-        "url",                  // URL
-        "num_range",            // 数値範囲
-        "file",                 // ファイル
-        "file_remove",          // ファイル削除
-        "file_required"         // ファイル必須
-    ]';
+    private $exclusion_item = [
+        'page',
+        'required',             // 必須
+        'singlebyte',           // 半角文字
+        'alphanumeric',         // 半角英数字
+        'alphabetic',           // 半角英字
+        'numeric',              // 数字
+        'numeric_hyphen',       // 数字+ハイフン
+        'hiragana',             // ひらがな
+        'katakana',             // カタカナ
+        'contain_multibyte',    // 全角文字を含む
+        'multibyte',            // 全角文字のみ
+        'email',                // メールアドレス
+        'match',                // 一致
+        'len',                  // 長さ
+        'url',                  // URL
+        'num_range',            // 数値範囲
+        'file',                 // ファイル
+        'file_remove',          // ファイル削除
+        'file_required',         // ファイル必須
+    ];
 
     public function __construct(Container $app)
     {
         $this->app = $app;
+        $this->tr = function ($key, array $replace = []) {
+            return $this->app->translator->trans($key, $replace);
+        };
+    }
+
+    private function tr($key, array $replace = [])
+    {
+        return $this->app->translator->trans($key, $replace);
     }
 
     public function input(Request $request, Response $response)
     {
-        $name = $request->getAttribute('name');
+        // CSRF token name and value
+        $nameKey = $this->app->csrf->getTokenNameKey();
+        $valueKey = $this->app->csrf->getTokenValueKey();
+
         $post = $request->getParsedBody();
-        if (!empty($post)){
-            $this->check($post);
-        }
-        return $this->app->view->render($response, 'input', [
-            'name' => $name,
-        ]);
+
+        return $this->app->view->render($response, 'input', array_merge([
+            'tr'          => $this->tr,
+            'name_key'    => $nameKey,
+            'value_key'   => $valueKey,
+            'token_name'  => $request->getAttribute($nameKey),
+            'token_value' => $request->getAttribute($valueKey),
+        ], $this->check($post)));
     }
-    public function check($post){
+
+    public function check($post)
+    {
+        $global_errors = [];
+        $required = [];
+        $singlebyte = [];
+        $alphanumeric = [];
+        $alphabetic = [];
+        $numeric = [];
+        $numeric_hyphen = [];
+        $hiragana = [];
+        $katakana = [];
+        $contain_multibyte = [];
+        $multibyte = [];
+        $email = [];
+        $match = [];
+        $len = [];
+        $url = [];
+        $num_range = [];
+        $file = [];
+        $file_remove = [];
+        $file_required = [];
         /*
         // デフォルトの checked 、 selected をテンプレートにセット
         $this->tpl->set('checked.default', $this->config['attr_checked']);
@@ -75,71 +107,56 @@ class Controller
         // 入力必須チェック
         if (isset($post['required'])) {
             foreach ($post['required'] as $value) {
-                if (!empty($post[$value])) {
-                    $required[$value] = \Lang::get('error.required', ['key' => $value], 'ja');
-                    $global_errors[] = \Lang::get('error.required', ['key' => $value], 'ja');
+                if (empty($post[$value])) {
+                    $global_errors[] = $required[$value] = $this->tr('error.required', ['key' => $value]);
                 }
             }
         }
-        /*
         // 半角文字チェック
-        if (isset($this->post['hankaku'])) {
-            foreach ($this->post['hankaku'] as $value) {
-                $this->tpl->set("hankaku.$value", false);
-                if (!empty($this->post[$value])) {
-                    $this->post[$value] = mb_convert_kana($this->post[$value], 'a');
-                    if (!$this->isHankaku($this->post[$value])) {
-                        $this->tpl->set("hankaku.$value", $this->h($value . $this->config['error_hankaku']));
-                        $this->global_errors[] = $this->h($value . $this->config['error_hankaku']);
+        if (isset($post['singlebyte'])) {
+            foreach ($post['singlebyte'] as $value) {
+                if (!empty($post[$value])) {
+                    $post[$value] = mb_convert_kana($post[$value], 'a');
+                    if (strlen($post[$value]) !== mb_strlen($post[$value])) {
+                        $global_errors[] = $singlebyte[$value] = $this->tr('error.singlebyte', ['key' => $value]);
                     }
                 }
             }
         }
         // 半角英数字チェック
-        if (isset($this->post['hankaku_eisu'])) {
-            foreach ($this->post['hankaku_eisu'] as $value) {
-                $this->tpl->set("hankaku_eisu.$value", false);
-                if (!empty($this->post[$value])) {
-                    $this->post[$value] = mb_convert_kana($this->post[$value], 'a');
-                    if (!$this->isHankakuEisu($this->post[$value])) {
-                        $this->tpl->set(
-                            "hankaku_eisu.$value",
-                            $this->h($value . $this->config['error_hankaku_eisu'])
-                        );
-                        $this->global_errors[] = $this->h($value . $this->config['error_hankaku_eisu']);
+        if (isset($post['alphanumeric'])) {
+            foreach ($post['alphanumeric'] as $value) {
+                if (!empty($post[$value])) {
+                    $post[$value] = mb_convert_kana($post[$value], 'a');
+                    if (preg_match('/^[a-zA-Z0-9_]*$/', $post[$value]) !== false) {
+                        $global_errors[] = $alphanumeic[$value] = $this->tr('error.alphanumeric', ['key' => $value]);
                     }
                 }
             }
         }
         // 半角英字チェック
-        if (isset($this->post['hankaku_eiji'])) {
-            foreach ($this->post['hankaku_eiji'] as $value) {
-                $this->tpl->set("hankaku_eiji.$value", false);
-                if (!empty($this->post[$value])) {
-                    $this->post[$value] = mb_convert_kana($this->post[$value], 'r');
-                    if (!$this->isHankakuEiji($this->post[$value])) {
-                        $this->tpl->set(
-                            "hankaku_eiji.$value",
-                            $this->h($value . $this->config['error_hankaku_eiji'])
-                        );
-                        $this->global_errors[] = $this->h($value . $this->config['error_hankaku_eiji']);
+        if (isset($post['alphbetic'])) {
+            foreach ($post['alphbetic'] as $value) {
+                if (!empty($post[$value])) {
+                    $post[$value] = mb_convert_kana($post[$value], 'r');
+                    if (preg_match('/^[a-zA-Z]*$/', $post[$value]) !== false) {
+                        $global_errors[] = $alphabetic[$value] = $this->tr('error.alphabetic', ['key' => $value]);
                     }
                 }
             }
         }
         // 数字チェック
-        if (isset($this->post['num'])) {
-            foreach ($this->post['num'] as $value) {
-                $this->tpl->set("num.$value", false);
-                if (!empty($this->post[$value])) {
-                    $this->post[$value] = mb_convert_kana($this->post[$value], 'n');
-                    if (!$this->isNum($this->post[$value])) {
-                        $this->tpl->set("num.$value", $this->h($value . $this->config['error_num']));
-                        $this->global_errors[] = $this->h($value . $this->config['error_num']);
+        if (isset($post['numeric'])) {
+            foreach ($post['numeric'] as $value) {
+                if (!empty($post[$value])) {
+                    $post[$value] = mb_convert_kana($post[$value], 'n');
+                    if (preg_match('/^\d*$/', $post[$value]) !== false) {
+                        $global_errors[] = $numeric[$value] = $this->tr('error.numeric', ['key' => $value]);
                     }
                 }
             }
         }
+        /*
         // 数字とハイフンチェック
         if (isset($this->post['num_hyphen'])) {
             foreach ($this->post['num_hyphen'] as $value) {
@@ -384,8 +401,7 @@ class Controller
                         if (!empty($value['tmp_name'])) {
                             // 拡張子のチェック
                             if (!empty($this->config['file_allow_extension']) &&
-                                !$this->isAllowFileExtension($value['name']))
-                            {
+                                !$this->isAllowFileExtension($value['name'])) {
                                 $file_error[] = $this->h($key . $this->config['error_file_extension']);
                                 $this->global_errors[] = $this->h($key . $this->config['error_file_extension']);
                             }
@@ -399,11 +415,13 @@ class Controller
                                 $file_error[] = $this->h($key . str_replace(
                                     '{ファイルサイズ}',
                                     $this->getFormatedBytes($this->config['file_max_size']),
-                                    $this->config['error_file_max_size']));
+                                    $this->config['error_file_max_size']
+                                ));
                                 $this->global_errors[] = $this->h($key . str_replace(
                                     '{ファイルサイズ}',
                                     $this->getFormatedBytes($this->config['file_max_size']),
-                                    $this->config['error_file_max_size']));
+                                    $this->config['error_file_max_size']
+                                ));
                             }
                             // エラーを判別
                             if (count($file_error) > 0) {
@@ -434,15 +452,38 @@ class Controller
             }
         }
         */
+        return [
+            'global_errors'     => $global_errors,
+            'required'          => $required,
+            'singlebyte'        => $singlebyte,
+            'alphanumeric'      => $alphanumeric,
+            'alphabetic'        => $alphabetic,
+            'numeric'           => $numeric,
+            'numeric_hyphen'    => $numeric_hyphen,
+            'hiragana'          => $hiragana,
+            'katakana'          => $katakana,
+            'contain_multibyte' => $contain_multibyte,
+            'multibyte'         => $multibyte,
+            'email'             => $email,
+            'match'             => $match,
+            'len'               => $len,
+            'url'               => $url,
+            'num_range'         => $num_range,
+            'file'              => $file,
+            'file_remove'       => $file_remove,
+            'file_required'     => $file_required,
+        ];
     }
+
     public function confirm(Request $request, Response $response)
     {
         $name = $request->getAttribute('name');
+
         return $this->app->view->render($response, 'confirm', [
             'name' => $name,
         ]);
     }
-    
+
     public function finish(Request $request, Response $response)
     {
         return $this->app->view->render($response, 'finish', []);

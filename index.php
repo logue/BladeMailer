@@ -9,6 +9,6 @@ if (PHP_SAPI == 'cli-server') {
     }
 }
 
-require __DIR__ . '/lib/vendor/autoload.php';
-require __DIR__ . '/lib/Controller.php';
-require __DIR__ . '/lib/Router.php';
+require './lib/vendor/autoload.php';
+require './lib/Controller.php';
+require './lib/Bootstrap.php';

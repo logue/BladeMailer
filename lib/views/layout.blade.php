@@ -13,9 +13,13 @@
         </style>
     </head>
     <body>
-        <div class="container">
+        <main class="container">
 @yield('content')
-        </div>
+        </main>
+        <hr />
+        <footer>
+            <p class="text-center">Blade✉Mailer</p>
+        </footer>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.slim.min.js" integrity="sha256-3edrmyuQ0w65f8gfBsqowzjJe2iM6n0nKciPUp8y+7E=" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.1.3/js/bootstrap.bundle.min.js" integrity="sha256-E/V4cWE4qvAeO5MOhjtGtqDzPndRO1LBk8lJ/PR7CA4=" crossorigin="anonymous"></script>
         <script>
@@ -26,6 +30,12 @@
                     $label.data('default', $label.html());
                     $label.addClass('selected').html(fileName);
                 });
+
+                $('.custom-range').on('change', function(){
+                    $(this).next().text($(this).val());
+                }).on('input', function(){
+                    $(this).next().text($(this).val());
+                })
 
                 $('form').on('reset', function(){
                     $('.custom-file-input').each(function(){
