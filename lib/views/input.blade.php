@@ -18,7 +18,9 @@
     </ul>
 </div>
 @endif
-<form method="post" action="./" enctype="multipart/form-data" novalidate="novalidate" {{ isset($global_errors) ?? 'class="was-validated"' }}>
+<form method="post" action="./" enctype="multipart/form-data" novalidate="novalidate" class="{{ isset($global_errors) ?? 'was-validated' }}">
+    <input type="hidden" name="{{ $name_key }}" value="{{ $token_name }}" />
+    <input type="hidden" name="{{ $value_key }}" value="{{ $token_value }}" />
     <section>
         <h2>フォームパーツサンプル</h2>
         <div class="form-group">
@@ -32,7 +34,7 @@
         <fieldset class="form-group">
             <legend class="col-form-label">ラジオボタン</legend>
             <div class="custom-control custom-radio custom-control-inline">
-                <input type="radio" id="radio1" name="ラジオボタン" class="custom-control-input" value="項目１" {{ $checked['ラジオボタン']['項目１'] ?? '' }} />
+                <input type="radio" id="radio1" name="ラジオボタン" class="custom-control-input" value="項目１" {{ $checked['ラジオボタン']['項目１'] ?? '' }} {{ $checked['default'] }} />
                 <label class="custom-control-label" for="radio1">項目１</label>
             </div>
             <div class="custom-control custom-radio custom-control-inline">

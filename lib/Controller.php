@@ -1,5 +1,11 @@
 <?php
-
+/**
+ * コントローラー.
+ *
+ * @author    Logue <logue@hotmail.co.jp>
+ * @copyright 2018 Logue
+ * @license   MIT
+ */
 use Slim\Container;
 use Slim\Http\Request;
 use Slim\Http\Response;
@@ -10,6 +16,8 @@ class Controller
     // 除外するフォーム名
     private $exclusion_item = [
         'page',
+        'checked',
+        'selected',
         'required',             // 必須
         'singlebyte',           // 半角文字
         'alphanumeric',         // 半角英数字
@@ -27,7 +35,7 @@ class Controller
         'num_range',            // 数値範囲
         'file',                 // ファイル
         'file_remove',          // ファイル削除
-        'file_required',         // ファイル必須
+        'file_required',        // ファイル必須
     ];
 
     public function __construct(Container $app)
@@ -36,6 +44,10 @@ class Controller
         $this->tr = function ($key, array $replace = []) {
             return $this->app->translator->trans($key, $replace);
         };
+        // CSRF token name and value
+        $this->csrf_name = $this->app->csrf->getTokenNameKey();
+        $this->csrf_key = $this->app->csrf->getTokenValueKey();
+        array_push($this->exclusion_item, $this->csrf_name, $this->csrf_key);
     }
 
     private function tr($key, array $replace = [])
@@ -45,23 +57,39 @@ class Controller
 
     public function input(Request $request, Response $response)
     {
-        // CSRF token name and value
-        $nameKey = $this->app->csrf->getTokenNameKey();
-        $valueKey = $this->app->csrf->getTokenValueKey();
+        $ret = [
+            'tr'          => $this->tr,
+            'name_key'    => $this->csrf_name,
+            'value_key'   => $this->csrf_key,
+            'token_name'  => $request->getAttribute($this->csrf_name),
+            'token_value' => $request->getAttribute($this->csrf_key),
+        ];
 
         $post = $request->getParsedBody();
 
-        return $this->app->view->render($response, 'input', array_merge([
-            'tr'          => $this->tr,
-            'name_key'    => $nameKey,
-            'value_key'   => $valueKey,
-            'token_name'  => $request->getAttribute($nameKey),
-            'token_value' => $request->getAttribute($valueKey),
-        ], $this->check($post)));
+        if (!empty($post)) {
+            foreach ($post as $key=>$value) {
+                if (in_array($key, $this->exclusion_item, true)) {
+                    continue;
+                }
+                $ret['value'][$key] = trim($value);
+            }
+            $ret = array_merge($ret, $this->check($post));
+            $ret['checked']['default'] = '';
+            $ret['selected']['default'] = '';
+        } else {
+            // 初期状態の選択
+            $ret['checked']['default'] = 'checked="checked"';
+            $ret['selected']['default'] = 'checked="checked"';
+        }
+
+        return $this->app->view->render($response, 'input', $ret);
     }
 
     public function check($post)
     {
+        $checked = [];
+        $selected = [];
         $global_errors = [];
         $required = [];
         $singlebyte = [];
@@ -81,29 +109,22 @@ class Controller
         $file = [];
         $file_remove = [];
         $file_required = [];
-        /*
-        // デフォルトの checked 、 selected をテンプレートにセット
-        $this->tpl->set('checked.default', $this->config['attr_checked']);
-        $this->tpl->set('selected.default', $this->config['attr_selected']);
-        if (count($this->post) > 0) {
-            $this->tpl->set('checked.default', '');
-            $this->tpl->set('selected.default', '');
-        }
+
         // ラジオボタン、チェックボックス、セレクトメニューの選択状態
-        foreach ($this->post as $key1 => $value1) {
+        foreach ($post as $key1 => $value1) {
             if (is_array($value1)) {
                 foreach ($value1 as $value2) {
                     if (!is_array($value2)) {
-                        $this->tpl->set("checked.$key1.$value2", $this->config['attr_checked']);
-                        $this->tpl->set("selected.$key1.$value2", $this->config['attr_selected']);
+                        $checked[$key1][$value2] = 'checked="checked"';
+                        $selected[$key1][$value2] = 'selected="selected"';
                     }
                 }
             } else {
-                $this->tpl->set("checked.$key1.$value1", $this->config['attr_checked']);
-                $this->tpl->set("selected.$key1.$value1", $this->config['attr_selected']);
+                $checked[$key1][$value1] = 'checked="checked"';
+                $selected[$key1][$value1] = 'selected="selected"';
             }
         }
-        */
+
         // 入力必須チェック
         if (isset($post['required'])) {
             foreach ($post['required'] as $value) {
@@ -150,32 +171,30 @@ class Controller
             foreach ($post['numeric'] as $value) {
                 if (!empty($post[$value])) {
                     $post[$value] = mb_convert_kana($post[$value], 'n');
-                    if (preg_match('/^\d*$/', $post[$value]) !== false) {
+                    if (preg_match('/\A[0-9]*\z/', $post[$value]) !== false) {
                         $global_errors[] = $numeric[$value] = $this->tr('error.numeric', ['key' => $value]);
                     }
                 }
             }
         }
-        /*
+
         // 数字とハイフンチェック
-        if (isset($this->post['num_hyphen'])) {
-            foreach ($this->post['num_hyphen'] as $value) {
-                $this->tpl->set("num_hyphen.$value", false);
-                if (!empty($this->post[$value])) {
-                    $this->post[$value] = mb_convert_kana($this->post[$value], 'a');
-                    if (!$this->isNumHyphen($this->post[$value])) {
-                        $this->tpl->set("num_hyphen.$value", $this->h($value . $this->config['error_num_hyphen']));
-                        $this->global_errors[] = $this->h($value . $this->config['error_num_hyphen']);
+        if (isset($post['numeric_hyphen'])) {
+            foreach ($post['numeric_hyphen'] as $value) {
+                if (!empty(post[$value])) {
+                    $post[$value] = mb_convert_kana($this->post[$value], 'a');
+                    if (preg_match('/\A[0-9-]*\z/', $post[$value]) !== false) {
+                        $global_errors[] = $numeric[$value] = $this->tr('error.numeric_hyphen', ['key' => $value]);
                     }
                 }
             }
         }
+        
         // ひらがなチェック
-        if (isset($this->post['hiragana'])) {
-            foreach ($this->post['hiragana'] as $value) {
-                $this->tpl->set("hiragana.$value", false);
-                if (!empty($this->post[$value])) {
-                    $this->post[$value] = mb_convert_kana($this->post[$value], 'cH');
+        if (isset($post['hiragana'])) {
+            foreach ($post['hiragana'] as $value) {
+                if (!empty($post[$value])) {
+                    $post[$value] = mb_convert_kana($this->post[$value], 'cH');
                     $this->post[$value] = $this->deleteBlank($this->post[$value]);
                     if (!$this->isHiragana($this->post[$value])) {
                         $this->tpl->set("hiragana.$value", $this->h($value . $this->config['error_hiragana']));
@@ -453,6 +472,8 @@ class Controller
         }
         */
         return [
+            'checked'           => $checked,
+            'selected'          => $selected,
             'global_errors'     => $global_errors,
             'required'          => $required,
             'singlebyte'        => $singlebyte,
