@@ -7,6 +7,11 @@ $finder = PhpCsFixer\Finder::create()
     ->exclude([
         '.git',
         '.idea',
+        'qdmail.php',
+        'qdstmp.php',
+        'Spyc.php',
+        'tinyTemplate.php',
+        'TransmitMail.php',
         'bower_components',
         'node_modules',
         'resources/lang',

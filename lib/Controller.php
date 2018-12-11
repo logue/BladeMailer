@@ -50,11 +50,9 @@ class Controller
         array_push($this->exclusion_item, $this->csrf_name, $this->csrf_key);
     }
 
-    private function tr($key, array $replace = [])
-    {
-        return $this->app->translator->trans($key, $replace);
-    }
-
+    /**
+     * 入力画面
+     */
     public function input(Request $request, Response $response)
     {
         $ret = [
@@ -85,8 +83,42 @@ class Controller
 
         return $this->app->view->render($response, 'input', $ret);
     }
+    /**
+     * 確認画面
+     */
+    public function confirm(Request $request, Response $response)
+    {
+        $name = $request->getAttribute('name');
 
-    public function check($post)
+        return $this->app->view->render($response, 'confirm', [
+            'name' => $name,
+        ]);
+    }
+    /**
+     * 完了画面
+     */
+    public function finish(Request $request, Response $response)
+    {
+        return $this->app->view->render($response, 'finish', []);
+    }
+    
+    /**
+     * メッセージ多言語化関数へのエイリアス
+     * 
+     * @param string $key
+     * @param array $replace
+     * 
+     * @return string
+     */
+    private function tr(string $key, array $replace = [])
+    {
+        return $this->app->translator->trans($key, $replace);
+    }
+
+    /**
+     * チェック関数
+     */
+    private function check($post)
     {
         $checked = [];
         $selected = [];
@@ -138,6 +170,7 @@ class Controller
             foreach ($post['singlebyte'] as $value) {
                 if (!empty($post[$value])) {
                     $post[$value] = mb_convert_kana($post[$value], 'a');
+                    // if (ctype_alnum($post[$value])) {
                     if (strlen($post[$value]) !== mb_strlen($post[$value])) {
                         $global_errors[] = $singlebyte[$value] = $this->tr('error.singlebyte', ['key' => $value]);
                     }
@@ -149,7 +182,8 @@ class Controller
             foreach ($post['alphanumeric'] as $value) {
                 if (!empty($post[$value])) {
                     $post[$value] = mb_convert_kana($post[$value], 'a');
-                    if (preg_match('/^[a-zA-Z0-9_]*$/', $post[$value]) !== false) {
+                    //if (preg_match('/^[a-zA-Z0-9_]*$/', $post[$value]) !== false) {
+                    if (ctype_alnum($post[$value])) {
                         $global_errors[] = $alphanumeic[$value] = $this->tr('error.alphanumeric', ['key' => $value]);
                     }
                 }
@@ -160,7 +194,8 @@ class Controller
             foreach ($post['alphbetic'] as $value) {
                 if (!empty($post[$value])) {
                     $post[$value] = mb_convert_kana($post[$value], 'r');
-                    if (preg_match('/^[a-zA-Z]*$/', $post[$value]) !== false) {
+                    //if (preg_match('/^[a-zA-Z]*$/', $post[$value]) !== false) {
+                    if (ctype_alpha($post[$value])) {
                         $global_errors[] = $alphabetic[$value] = $this->tr('error.alphabetic', ['key' => $value]);
                     }
                 }
@@ -171,7 +206,8 @@ class Controller
             foreach ($post['numeric'] as $value) {
                 if (!empty($post[$value])) {
                     $post[$value] = mb_convert_kana($post[$value], 'n');
-                    if (preg_match('/\A[0-9]*\z/', $post[$value]) !== false) {
+                    //if (preg_match('/\A[0-9]*\z/', $post[$value]) !== false) {
+                    if (ctype_digit($post[$value])) {
                         $global_errors[] = $numeric[$value] = $this->tr('error.numeric', ['key' => $value]);
                     }
                 }
@@ -182,9 +218,9 @@ class Controller
         if (isset($post['numeric_hyphen'])) {
             foreach ($post['numeric_hyphen'] as $value) {
                 if (!empty(post[$value])) {
-                    $post[$value] = mb_convert_kana($this->post[$value], 'a');
+                    $post[$value] = mb_convert_kana($post[$value], 'a');
                     if (preg_match('/\A[0-9-]*\z/', $post[$value]) !== false) {
-                        $global_errors[] = $numeric[$value] = $this->tr('error.numeric_hyphen', ['key' => $value]);
+                        $global_errors[] = $numeric_hyphen[$value] = $this->tr('error.numeric_hyphen', ['key' => $value]);
                     }
                 }
             }
@@ -194,75 +230,57 @@ class Controller
         if (isset($post['hiragana'])) {
             foreach ($post['hiragana'] as $value) {
                 if (!empty($post[$value])) {
-                    $post[$value] = mb_convert_kana($this->post[$value], 'cH');
-                    $this->post[$value] = $this->deleteBlank($this->post[$value]);
-                    if (!$this->isHiragana($this->post[$value])) {
-                        $this->tpl->set("hiragana.$value", $this->h($value . $this->config['error_hiragana']));
-                        $this->global_errors[] = $this->h($value . $this->config['error_hiragana']);
+                    $post[$value] = mb_convert_kana($post[$value], 'cH');
+                    if (preg_match('/\A[ぁ-ゞ]*\z/', $post[$value]) !== false) {
+                        $global_errors[] = $hiragana[$value] = $this->tr('error.hiragana', ['key' => $value]);
                     }
                 }
             }
         }
         // 全角カタカナチェック
-        if (isset($this->post['zenkaku_katakana'])) {
-            foreach ($this->post['zenkaku_katakana'] as $value) {
-                $this->tpl->set("zenkaku_katakana.$value", false);
-                if (!empty($this->post[$value])) {
-                    $this->post[$value] = mb_convert_kana($this->post[$value], 'CK');
-                    $this->post[$value] = $this->deleteBlank($this->post[$value]);
-                    if (!$this->isZenkakuKatakana($this->post[$value])) {
-                        $this->tpl->set(
-                            "zenkaku_katakana.$value",
-                            $this->h($value . $this->config['error_zenkaku_katakana'])
-                        );
-                        $this->global_errors[] = ($value . $this->config['error_zenkaku_katakana']);
+        if (isset($post['katakana'])) {
+            foreach ($post['katakana'] as $value) {
+                if (!empty($post[$value])) {
+                    $post[$value] = mb_convert_kana(trim(trim($post[$value])), 'CK');
+                    if (preg_match('/\A[ァ-ヶー]*\z/',$post[$value]) !== false) {
+                        $global_errors[] = $katakana[$value] = $this->tr('error.katakana', ['key' => $value]);
                     }
                 }
             }
         }
         // 全角文字チェック
-        if (isset($this->post['zenkaku'])) {
-            foreach ($this->post['zenkaku'] as $value) {
-                $this->tpl->set("zenkaku.$value", false);
-                if (!empty($this->post[$value])) {
-                    if (!$this->isZenkaku($this->post[$value])) {
-                        $this->tpl->set("zenkaku.$value", $this->h($value . $this->config['error_zenkaku']));
-                        $this->global_errors[] = $this->h($value . $this->config['error_zenkaku']);
+        if (isset($post['contain_multibyte'])) {
+            foreach ($post['contain_multibyte'] as $value) {
+                if (!empty($post[$value])) {
+                    if ( preg_match('/[^ -~｡-ﾟ]/', $post[$value])!== false) {
+                        $global_errors[] = $contain_multibyte[$value] = $this->tr('error.contain_multibyte', ['key' => $value]);
                     }
                 }
             }
         }
         // 全て全角文字チェック
-        if (isset($this->post['zenkaku_all'])) {
-            foreach ($this->post['zenkaku_all'] as $value) {
-                $this->tpl->set("zenkaku_all.$value", false);
-                if (!empty($this->post[$value])) {
-                    if (!$this->isZenkakuAll($this->post[$value])) {
-                        $this->tpl->set(
-                            "zenkaku_all.$value",
-                            $this->h($value . $this->config['error_zenkaku_all'])
-                        );
-                        $this->global_errors[] = $this->h($value . $this->config['error_zenkaku_all']);
+        if (isset($post['multibyte'])) {
+            foreach ($post['multibyte'] as $value) {
+                if (!empty($post[$value])) {
+                    if ( preg_match('/\A[^\x01-\x7E]*\z/', $post[$value])!== false) {
+                        $global_errors[] = $multibyte[$value] = $this->tr('error.multibyte', ['key' => $value]);
                     }
                 }
             }
         }
         // メールアドレスチェック
-        if (isset($this->post['email'])) {
-            foreach ($this->post['email'] as $value) {
-                $this->tpl->set("email.$value", false);
-                if (!empty($this->post[$value])) {
-                    $this->post[$value] = mb_convert_kana($this->post[$value], 'a');
-                    $this->post[$value] = $this->deleteCrlf($this->post[$value]);
-                    if (!$this->isEmail($this->post[$value])) {
-                        $this->tpl->set("email.$value", $this->h($value . $this->config['error_email']));
-                        $this->global_errors[] = $this->h($value . $this->config['error_email']);
+        if (isset($post['email'])) {
+            foreach ($post['email'] as $value) {
+                if (!empty($post[$value])) {
+                    $post[$value] = mb_convert_kana($post[$value], 'a');
+                    if (preg_match('/^([a-zA-Z0-9])+([a-zA-Z0-9\._-])*@([a-zA-Z0-9_-])+([a-zA-Z0-9\._-]+)+$/', $post[$value]) !== false) {
+                        $global_errors[] = $email[$value] = $this->tr($this->config['error.email'], ['key' => $value]);
                     }
                 }
             }
         }
-        // 自動返信メールの宛先（ $this->post[$this->config['auto_reply_email']] ）のメールアドレスチェック
-        if (!empty($this->post[$this->config['auto_reply_email']])) {
+        // TODO:自動返信メールの宛先（ $this->post[$this->config['auto_reply_email']] ）のメールアドレスチェック
+        if (!empty($post[$this->config['auto_reply_email']])) {
             $this->post[$this->config['auto_reply_email']] = mb_convert_kana($this->post[$this->config['auto_reply_email']], 'a');
             $this->post[$this->config['auto_reply_email']] = $this->deleteCrlf($this->post[$this->config['auto_reply_email']]);
             if (!$this->isEmail($this->post[$this->config['auto_reply_email']])) {
@@ -273,21 +291,21 @@ class Controller
             }
         }
         // 一致チェック
-        if (isset($this->post['match'])) {
-            foreach ($this->post['match'] as $value) {
-                $array = preg_split('/\s|,/', $value);
-                $this->tpl->set("match.$array[0]", false);
-                if ((!empty($this->post[$array[0]]) || !empty($this->post[$array[1]]))
-                    && $this->post[$array[0]] != $this->post[$array[1]]
+        if (isset($post['match'])) {
+            foreach ($post['match'] as $value) {
+                //$array = preg_split('/\s|,/', $value);
+                $array = explode(' ', $value);
+                if ((!empty($post[$array[0]]) || !empty($post[$array[1]]))
+                    && $post[$array[0]] !== $>post[$array[1]]
                 ) {
                     $this->tpl->set("match.$array[0]", $this->h($array[0] . $this->config['error_match']));
                     $this->global_errors[] = $this->h($array[0] . $this->config['error_match']);
                 }
             }
         }
-        // 文字数チェック
-        if (isset($this->post['len'])) {
-            foreach ($this->post['len'] as $value) {
+        // TODO:文字数チェック
+        if (isset($post['len'])) {
+            foreach ($post['len'] as $value) {
                 $array = preg_split('/\s|,/', $value);
                 $delim = explode('-', $array[1]);
                 $delim = array_map('intval', $delim);
@@ -309,9 +327,9 @@ class Controller
                 }
             }
         }
-        // URL チェック
-        if (isset($this->post['url'])) {
-            foreach ($this->post['url'] as $value) {
+        // TODO:URL チェック
+        if (isset($post['url'])) {
+            foreach ($post['url'] as $value) {
                 $this->tpl->set("url.$value", false);
                 if (!empty($this->post[$value])) {
                     $this->post[$value] = mb_convert_kana($this->post[$value], 'a');
@@ -323,7 +341,7 @@ class Controller
                 }
             }
         }
-        // 整数範囲チェック
+        // TODO:整数範囲チェック
         if (isset($this->post['num_range'])) {
             foreach ($this->post['num_range'] as $value) {
                 $array = preg_split('/\s|,/', $value);
@@ -366,7 +384,7 @@ class Controller
                 }
             }
         }
-        // ファイル添付を利用する場合
+        // TODO:ファイル添付を利用する場合
         if ($this->config['file']) {
             // ファイルの削除
             if (isset($this->post['file_remove'])) {
@@ -470,7 +488,6 @@ class Controller
                 }
             }
         }
-        */
         return [
             'checked'           => $checked,
             'selected'          => $selected,
@@ -494,19 +511,5 @@ class Controller
             'file_remove'       => $file_remove,
             'file_required'     => $file_required,
         ];
-    }
-
-    public function confirm(Request $request, Response $response)
-    {
-        $name = $request->getAttribute('name');
-
-        return $this->app->view->render($response, 'confirm', [
-            'name' => $name,
-        ]);
-    }
-
-    public function finish(Request $request, Response $response)
-    {
-        return $this->app->view->render($response, 'finish', []);
     }
 }
